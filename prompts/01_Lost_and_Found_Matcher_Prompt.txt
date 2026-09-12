@@ -1,0 +1,135 @@
+PROJECT 1 — LOST & FOUND MATCHER
+CLASS 12 COMPUTER SCIENCE FINAL PROJECT
+Goal: Build a simple but impressive local Lost & Found Management System using Python + MySQL. The code must be minimal, readable, syllabus-friendly, and easy to explain in a viva.
+
+TECH STACK
+- Python 3
+- MySQL
+- mysql-connector-python
+- Optional: Tkinter for GUI. Prefer Tkinter if a simple desktop interface can be made without greatly increasing code.
+- No web framework, APIs, cloud services, machine learning libraries, or unnecessary dependencies.
+
+CORE IDEA
+The system stores lost and found item reports and suggests possible matches using simple rule-based scoring. It should feel smart without using AI.
+
+MAIN FEATURES
+1. Add Lost Item
+   - Item name/type
+   - Color
+   - Location
+   - Date
+   - Description
+   - Reporter name or student ID
+   - Status: Lost / Matched / Returned
+
+2. Add Found Item
+   - Same basic fields
+   - Status: Found / Matched / Returned
+
+3. View Lost Items
+4. View Found Items
+5. Search Items
+   - Search by keyword, color, location, or item type
+6. Possible Match Finder
+   - Compare lost and found records
+   - Give each pair a simple score based on matching fields
+   - Example scoring:
+     item type = +40
+     color = +20
+     location = +20
+     keywords/description = +20
+   - Show only sensible matches above a threshold such as 50
+7. Mark Item as Returned
+8. Delete a record
+9. Exit
+
+DATABASE
+Use one database, for example:
+lost_found_db
+
+Tables:
+1. lost_items
+   - id INT PRIMARY KEY AUTO_INCREMENT
+   - item_name VARCHAR(...)
+   - color VARCHAR(...)
+   - location VARCHAR(...)
+   - lost_date DATE
+   - description TEXT
+   - reporter VARCHAR(...)
+   - status VARCHAR(...)
+
+2. found_items
+   - id INT PRIMARY KEY AUTO_INCREMENT
+   - item_name VARCHAR(...)
+   - color VARCHAR(...)
+   - location VARCHAR(...)
+   - found_date DATE
+   - description TEXT
+   - finder VARCHAR(...)
+   - status VARCHAR(...)
+
+Keep the schema small. Do not add tables unless genuinely necessary.
+
+PROGRAM STRUCTURE
+Prefer one main Python file plus one SQL file.
+Suggested:
+- lost_found.py
+- lost_found.sql
+
+FUNCTIONS SHOULD BE SMALL AND REUSABLE:
+- connect_db()
+- add_lost()
+- add_found()
+- show_lost()
+- show_found()
+- search_items()
+- find_matches()
+- mark_returned()
+- delete_record()
+- main()
+
+MATCHING LOGIC
+Do NOT use machine learning.
+Normalize text to lowercase and compare simple fields.
+Create a small helper such as normalize_text().
+Calculate a numeric score and display:
+Possible Match — 80%
+Only show enough information to make the result understandable.
+
+UI
+Create a clean terminal menu OR a very simple Tkinter GUI.
+If Tkinter makes the code much longer, use terminal UI.
+Example menu:
+1. Report Lost Item
+2. Report Found Item
+3. View Lost Items
+4. View Found Items
+5. Search
+6. Find Possible Matches
+7. Mark Returned
+8. Delete Record
+9. Exit
+
+CODING CONSTRAINTS
+- Aim for about 200–350 lines of Python, not thousands.
+- Avoid classes unless truly necessary.
+- Avoid overengineering.
+- No login system unless it can be added with almost no complexity.
+- No external APIs.
+- No unnecessary comments; comment only important logic.
+- Use parameterized SQL queries.
+- Handle invalid input and database errors cleanly.
+- Keep code suitable for a Class 12 student to understand and explain.
+
+OUTPUT REQUIRED
+Provide:
+1. Complete Python code
+2. Complete MySQL SQL/schema script
+3. Short setup instructions
+4. Sample data for demonstration
+5. Short explanation of how the matching score works
+6. A Class 12 viva explanation of the project in simple language
+7. List of key Python concepts and SQL concepts used
+
+IMPORTANT:
+Optimize for the smallest practical codebase while keeping the project polished and genuinely interesting.

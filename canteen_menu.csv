@@ -1,0 +1,11 @@
+id,name,category,price,available
+1,Veg Cheese Burger,Snacks,60.00,Yes
+2,Crispy Veg Momos (6 pcs),Snacks,50.00,Yes
+3,Grilled Paneer Sandwich,Snacks,55.00,Yes
+4,Classic Samosa (2 pcs),Snacks,30.00,Yes
+5,Veg Fried Rice with Gravy,Meals,90.00,Yes
+6,Chole Bhature Platter,Meals,80.00,Yes
+7,Cold Coffee with Ice Cream,Beverages,45.00,Yes
+8,Fresh Lime Soda,Beverages,30.00,Yes
+9,Chocolate Brownie,Desserts,40.00,Yes
+10,Fruit Juice (Tetra Pack),Beverages,25.00,No

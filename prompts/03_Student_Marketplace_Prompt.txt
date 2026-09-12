@@ -1,0 +1,154 @@
+PROJECT 3 — STUDENT MARKETPLACE
+CLASS 12 COMPUTER SCIENCE FINAL PROJECT
+Goal: Build a simple student-to-student marketplace using Python + MySQL. Students can list used books, calculators, uniforms, stationery, sports items, and similar goods for sale. Keep the implementation compact and easy to explain.
+
+TECH STACK
+- Python 3
+- MySQL
+- mysql-connector-python
+- Optional: Tkinter if a basic interface does not significantly increase code.
+- No web server, online payment, APIs, image hosting, or authentication framework.
+
+CORE IDEA
+Create a mini OLX-style marketplace restricted to students. Sellers add listings. Buyers can search and view listings. A listing can later be marked as sold.
+
+MAIN FEATURES
+1. Add Listing
+   - Item name
+   - Category
+   - Description
+   - Condition
+   - Price
+   - Seller name / student ID
+   - Contact information
+   - Status: Available / Sold
+
+2. View All Listings
+3. Search Listings
+   - By keyword
+   - By category
+   - By price range if practical
+4. View a Single Listing
+5. Mark Listing as Sold
+6. Delete Listing
+7. Show Available vs Sold listings
+8. Optional: simple sort by price
+
+GOOD CATEGORIES
+- Books
+- Calculator
+- Uniform
+- Stationery
+- Sports
+- Electronics
+- Other
+
+DATABASE
+Use:
+student_market_db
+
+Table:
+listings
+- id INT PRIMARY KEY AUTO_INCREMENT
+- item_name VARCHAR(...)
+- category VARCHAR(...)
+- description TEXT
+- condition_status VARCHAR(...)
+- price DECIMAL(10,2)
+- seller_name VARCHAR(...)
+- student_id VARCHAR(...)
+- contact VARCHAR(...)
+- listed_date DATE
+- status VARCHAR(...)
+
+Keep this to ONE main table unless another table becomes clearly necessary.
+
+PROGRAM STRUCTURE
+Suggested files:
+- marketplace.py
+- marketplace.sql
+
+Useful functions:
+- connect_db()
+- add_listing()
+- show_listings()
+- search_listings()
+- view_listing()
+- mark_sold()
+- delete_listing()
+- main()
+
+SEARCH
+Implement simple SQL search using LIKE.
+Examples:
+- item name contains "physics"
+- category = "Books"
+- price <= 500
+
+Example:
+SELECT * FROM listings
+WHERE item_name LIKE %keyword%
+AND status = 'Available';
+
+Do not build a complicated recommendation system unless it can be done with a tiny amount of code.
+
+USER FLOW
+1. Main Menu
+2. Browse Listings
+3. Search
+4. Add Listing
+5. View Listing
+6. Mark Sold
+7. Delete Listing
+8. Exit
+
+Example display:
+=================================
+        STUDENT MARKET
+=================================
+#12  Casio Calculator
+Category: Calculator
+Condition: Good
+Price: ₹450
+Seller: Rahul
+Status: Available
+---------------------------------
+
+CHEAP POLISH FEATURES
+- Highlight the cheapest result in search output.
+- Sort results by price.
+- Automatically save today's date.
+- Show count of available listings.
+- Reject negative prices.
+- Confirm before deleting or marking sold.
+
+CODING CONSTRAINTS
+- Aim for about 180–300 lines of Python.
+- Prefer one database table.
+- Avoid classes.
+- Avoid login/authentication complexity.
+- No payment system.
+- No image upload.
+- No online messaging.
+- No unnecessary dependencies.
+- Use parameterized SQL queries.
+- Handle invalid input cleanly.
+- Use helper functions to avoid repeated database code.
+
+UI
+Choose terminal UI if it gives the cleanest and smallest program.
+Choose Tkinter only if it can remain simple.
+The program should still look polished through formatting, headings, and clear menus.
+
+OUTPUT REQUIRED
+Provide:
+1. Complete Python code
+2. Complete MySQL schema
+3. Sample records
+4. Setup/run instructions
+5. Explanation of the search queries
+6. Class 12 viva questions and simple answers
+7. List of Python and SQL concepts demonstrated
+
+IMPORTANT:
+Optimize aggressively for simplicity. This project should look like a real mini marketplace but be one of the easiest of the three to code and explain.
