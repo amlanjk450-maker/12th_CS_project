@@ -28,7 +28,7 @@ except ImportError:
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "",  # Default XAMPP / MySQL root password. Change if required.
+    "password": "root",
     "database": "canteen_db"
 }
 

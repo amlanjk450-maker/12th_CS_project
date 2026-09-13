@@ -28,7 +28,7 @@ except ImportError:
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "",  # Default XAMPP / MySQL root password. Change if you set a password.
+    "password": "root",
     "database": "lost_found_db"
 }
 
