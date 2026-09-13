@@ -1,17 +1,16 @@
 """
 ================================================================================
-CBSE CLASS 12 COMPUTER SCIENCE FINAL PROJECTS LAUNCHER
+CBSE CLASS 12 COMPUTER SCIENCE FINAL PROJECTS SUITE (PYTHON + MYSQL)
 ================================================================================
-This master launcher allows you to select and run any of the 3 single-file 
-projects directly from this menu, or you can run each file individually:
+This master launcher allows you to select and run any of the 3 projects:
 
-  1. python 01_lost_and_found_matcher.py
-  2. python 02_school_canteen_ordering_system.py
-  3. python 03_student_marketplace.py
+  1. python 01_lost_and_found_matcher.py  (SQL: lost_found.sql)
+  2. python 02_school_canteen_ordering_system.py (SQL: canteen.sql)
+  3. python 03_student_marketplace.py     (SQL: marketplace.sql)
 
 All projects strictly adhere to the CBSE Class 12 CS Curriculum:
-- Pure Python 3 (Standard Library only - No external dependencies or MySQL required)
-- File Handling with CSV Module
+- Python-MySQL Connectivity (mysql.connector)
+- Parameterized SQL CRUD Queries
 - Modular User-Defined Functions
 - Clean Menu-Driven CLI & Error Handling
 ================================================================================
@@ -19,16 +18,15 @@ All projects strictly adhere to the CBSE Class 12 CS Curriculum:
 
 import sys
 import subprocess
-import os
 
 def main():
     while True:
         print("\n" + "="*60)
-        print("     CBSE CLASS 12 CS FINAL PROJECTS SUITE")
+        print("  CBSE CLASS 12 CS FINAL PROJECTS SUITE (PYTHON + MYSQL)")
         print("="*60)
-        print(" [1] Project 1: Lost & Found Matcher System")
-        print(" [2] Project 2: School Canteen Ordering & Billing System")
-        print(" [3] Project 3: Student-to-Student Marketplace")
+        print(" [1] Project 1: Lost & Found Matcher System (MySQL)")
+        print(" [2] Project 2: School Canteen Ordering System (MySQL)")
+        print(" [3] Project 3: Student-to-Student Marketplace (MySQL)")
         print(" [4] Exit")
         print("="*60)
 

@@ -1,175 +1,161 @@
 """
 ================================================================================
-PROJECT 1: LOST & FOUND MATCHER
-CBSE CLASS 12 COMPUTER SCIENCE FINAL PROJECT (SINGLE FILE SYSTEM)
+PROJECT 1: LOST & FOUND MATCHER (PYTHON + MYSQL)
+CBSE CLASS 12 COMPUTER SCIENCE FINAL PROJECT
 ================================================================================
 Syllabus Topics Covered:
-- Python Functions (User-defined functions, default parameters, return values)
-- File Handling (CSV module - reader, writer, DictReader, DictWriter)
-- Data Structures (Lists, Dictionaries, Tuples, Strings)
+- Python-MySQL Connectivity (mysql.connector, connect, cursor, execute, commit)
+- SQL Queries (CREATE, INSERT, SELECT, UPDATE, DELETE, LIKE, WHERE, COUNT)
+- Python Functions (User-defined functions, parameters, return values)
+- Data Structures (Dictionaries, Lists, Tuples, Sets)
 - Text Normalization and Heuristic Matching Algorithm (Rule-based scoring)
-- Error Handling (try-except blocks) & Input Validation
+- Error Handling (try-except-finally blocks) & Input Validation
 ================================================================================
 """
 
-import csv
-import os
+import sys
 import datetime
 
-# CSV File Constants
-LOST_FILE = "lost_items.csv"
-FOUND_FILE = "found_items.csv"
+try:
+    import mysql.connector
+    from mysql.connector import Error
+except ImportError:
+    print("\n[!] 'mysql-connector-python' is not installed.")
+    print("    Please install it using: pip install mysql-connector-python")
+    sys.exit(1)
 
-LOST_FIELDS = ["id", "item_name", "category", "color", "location", "date", "reporter", "contact", "description", "status"]
-FOUND_FIELDS = ["id", "item_name", "category", "color", "location", "date", "finder", "contact", "description", "status"]
+# Default Database Configuration
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "",  # Default XAMPP / MySQL root password. Change if you set a password.
+    "database": "lost_found_db"
+}
 
 # ------------------------------------------------------------------------------
-# DATABASE / FILE INITIALIZATION & HELPERS
+# DATABASE CONNECTION & AUTO-INITIALIZATION
 # ------------------------------------------------------------------------------
 
-def initialize_files():
-    """Create CSV files with sample data if they do not exist."""
-    if not os.path.exists(LOST_FILE):
-        with open(LOST_FILE, mode='w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=LOST_FIELDS)
-            writer.writeheader()
-            sample_lost = [
-                {
-                    "id": "101",
-                    "item_name": "Titan Black Watch",
-                    "category": "Accessories",
-                    "color": "Black",
-                    "location": "Physics Lab",
-                    "date": "2026-09-01",
-                    "reporter": "Aman Sharma",
-                    "contact": "9876543210",
-                    "description": "Analog watch with silver dial and black leather strap",
-                    "status": "Lost"
-                },
-                {
-                    "id": "102",
-                    "item_name": "Classmate Notebook",
-                    "category": "Stationery",
-                    "color": "Blue",
-                    "location": "Library 2nd Floor",
-                    "date": "2026-09-03",
-                    "reporter": "Pooja Verma",
-                    "contact": "9811223344",
-                    "description": "Thick ruled notebook with Chemistry notes and name label",
-                    "status": "Lost"
-                },
-                {
-                    "id": "103",
-                    "item_name": "Wildcraft Water Bottle",
-                    "category": "Bottles",
-                    "color": "Blue",
-                    "location": "Playground",
-                    "date": "2026-09-05",
-                    "reporter": "Rohan Gupta",
-                    "contact": "9899001122",
-                    "description": "Steel insulated bottle with a small dent on the cap",
-                    "status": "Lost"
-                },
-                {
-                    "id": "104",
-                    "item_name": "Casio Scientific Calculator",
-                    "category": "Electronics",
-                    "color": "Grey",
-                    "location": "Room 104",
-                    "date": "2026-09-08",
-                    "reporter": "Sneha Roy",
-                    "contact": "9765432109",
-                    "description": "Model fx-991EX with small sticker of Mickey Mouse on back",
-                    "status": "Lost"
-                }
-            ]
-            writer.writerows(sample_lost)
-
-    if not os.path.exists(FOUND_FILE):
-        with open(FOUND_FILE, mode='w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=FOUND_FIELDS)
-            writer.writeheader()
-            sample_found = [
-                {
-                    "id": "201",
-                    "item_name": "Black Wrist Watch",
-                    "category": "Accessories",
-                    "color": "Black",
-                    "location": "Physics Lab",
-                    "date": "2026-09-02",
-                    "finder": "Lab Assistant Ravi",
-                    "contact": "9800112233",
-                    "description": "Titan watch found near experiment table #4 with black strap",
-                    "status": "Found"
-                },
-                {
-                    "id": "202",
-                    "item_name": "Blue Steel Bottle",
-                    "category": "Bottles",
-                    "color": "Blue",
-                    "location": "Sports Ground",
-                    "date": "2026-09-06",
-                    "finder": "Coach Kapoor",
-                    "contact": "9877001122",
-                    "description": "Wildcraft metallic blue bottle picked up from football bench",
-                    "status": "Found"
-                },
-                {
-                    "id": "203",
-                    "item_name": "Red Geometry Box",
-                    "category": "Stationery",
-                    "color": "Red",
-                    "location": "Math Lab",
-                    "date": "2026-09-07",
-                    "finder": "Karan Singh",
-                    "contact": "9812345678",
-                    "description": "Camlin geometry box with complete compass set",
-                    "status": "Found"
-                },
-                {
-                    "id": "204",
-                    "item_name": "Scientific Calculator Casio",
-                    "category": "Electronics",
-                    "color": "Grey",
-                    "location": "Room 104",
-                    "date": "2026-09-09",
-                    "finder": "Neha Sen",
-                    "contact": "9833445566",
-                    "description": "Casio calculator left on back bench",
-                    "status": "Found"
-                }
-            ]
-            writer.writerows(sample_found)
+def get_db_connection(use_database=True):
+    """
+    Establish connection to MySQL server.
+    If default connection fails due to password, prompts user to enter MySQL password.
+    """
+    while True:
+        try:
+            if use_database:
+                conn = mysql.connector.connect(
+                    host=DB_CONFIG["host"],
+                    user=DB_CONFIG["user"],
+                    password=DB_CONFIG["password"],
+                    database=DB_CONFIG["database"]
+                )
+            else:
+                conn = mysql.connector.connect(
+                    host=DB_CONFIG["host"],
+                    user=DB_CONFIG["user"],
+                    password=DB_CONFIG["password"]
+                )
+            if conn.is_connected():
+                return conn
+        except Error as err:
+            if err.errno == 1045:  # Access denied (wrong password)
+                print(f"\n[!] MySQL Access Denied for user '{DB_CONFIG['user']}'.")
+                new_pwd = input("Enter your MySQL root password: ")
+                DB_CONFIG["password"] = new_pwd
+            elif err.errno == 1049:  # Unknown database
+                # Initialize database first
+                initialize_database()
+                use_database = True
+            elif err.errno == 2003:  # Can't connect to MySQL server
+                print("\n[!] ERROR: Cannot connect to MySQL server at localhost:3306.")
+                print("    Please ensure your MySQL service (e.g. MySQL Server / XAMPP / WAMP) is running.")
+                sys.exit(1)
+            else:
+                print(f"\n[!] Database Connection Error: {err}")
+                sys.exit(1)
 
 
-def read_records(filename):
-    """Read all records from a CSV file and return as list of dicts."""
-    records = []
-    if os.path.exists(filename):
-        with open(filename, mode='r', newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                records.append(row)
-    return records
-
-
-def write_records(filename, fieldnames, records):
-    """Overwrite a CSV file with updated records."""
-    with open(filename, mode='w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(records)
-
-
-def get_next_id(records, prefix="10"):
-    """Generate next auto-increment integer ID."""
-    if not records:
-        return f"{prefix}1"
+def initialize_database():
+    """
+    Connects to MySQL server, creates database 'lost_found_db' and tables
+    with sample records if they do not exist.
+    """
     try:
-        max_id = max(int(r["id"]) for r in records if r["id"].isdigit())
-        return str(max_id + 1)
-    except ValueError:
-        return f"{prefix}{len(records) + 1}"
+        conn = get_db_connection(use_database=False)
+        cursor = conn.cursor()
+
+        # Create Database
+        cursor.execute("CREATE DATABASE IF NOT EXISTS lost_found_db")
+        cursor.execute("USE lost_found_db")
+
+        # Table 1: lost_items
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS lost_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                item_name VARCHAR(100) NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                color VARCHAR(50) NOT NULL,
+                location VARCHAR(100) NOT NULL,
+                lost_date DATE NOT NULL,
+                reporter VARCHAR(100) NOT NULL,
+                contact VARCHAR(50) NOT NULL,
+                description TEXT,
+                status VARCHAR(30) DEFAULT 'Lost'
+            )
+        """)
+
+        # Table 2: found_items
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS found_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                item_name VARCHAR(100) NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                color VARCHAR(50) NOT NULL,
+                location VARCHAR(100) NOT NULL,
+                found_date DATE NOT NULL,
+                finder VARCHAR(100) NOT NULL,
+                contact VARCHAR(50) NOT NULL,
+                description TEXT,
+                status VARCHAR(30) DEFAULT 'Found'
+            )
+        """)
+
+        conn.commit()
+
+        # Seed sample data if empty
+        cursor.execute("SELECT COUNT(*) FROM lost_items")
+        if cursor.fetchone()[0] == 0:
+            sample_lost = [
+                ("Titan Black Watch", "Accessories", "Black", "Physics Lab", "2026-09-01", "Aman Sharma", "9876543210", "Analog watch with silver dial and black leather strap", "Lost"),
+                ("Classmate Notebook", "Stationery", "Blue", "Library 2nd Floor", "2026-09-03", "Pooja Verma", "9811223344", "Thick ruled notebook with Chemistry notes and name label", "Lost"),
+                ("Wildcraft Water Bottle", "Bags/Bottles", "Blue", "Playground", "2026-09-05", "Rohan Gupta", "9899001122", "Steel insulated bottle with a small dent on the cap", "Lost"),
+                ("Casio Scientific Calculator", "Electronics", "Grey", "Room 104", "2026-09-08", "Sneha Roy", "9765432109", "Model fx-991EX with small sticker of Mickey Mouse on back", "Lost")
+            ]
+            cursor.executemany("""
+                INSERT INTO lost_items (item_name, category, color, location, lost_date, reporter, contact, description, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, sample_lost)
+            conn.commit()
+
+        cursor.execute("SELECT COUNT(*) FROM found_items")
+        if cursor.fetchone()[0] == 0:
+            sample_found = [
+                ("Black Wrist Watch", "Accessories", "Black", "Physics Lab", "2026-09-02", "Lab Assistant Ravi", "9800112233", "Titan watch found near experiment table #4 with black strap", "Found"),
+                ("Blue Steel Bottle", "Bags/Bottles", "Blue", "Sports Ground", "2026-09-06", "Coach Kapoor", "9877001122", "Wildcraft metallic blue bottle picked up from football bench", "Found"),
+                ("Red Geometry Box", "Stationery", "Red", "Math Lab", "2026-09-07", "Karan Singh", "9812345678", "Camlin geometry box with complete compass set", "Found"),
+                ("Scientific Calculator Casio", "Electronics", "Grey", "Room 104", "2026-09-09", "Neha Sen", "9833445566", "Casio calculator left on back bench", "Found")
+            ]
+            cursor.executemany("""
+                INSERT INTO found_items (item_name, category, color, location, found_date, finder, contact, description, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, sample_found)
+            conn.commit()
+
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[!] Database Initialization Error: {err}")
 
 
 # ------------------------------------------------------------------------------
@@ -181,7 +167,7 @@ def normalize_text(text):
     if not text:
         return ""
     clean = ""
-    for char in text.lower():
+    for char in str(text).lower():
         if char.isalnum() or char.isspace():
             clean += char
         else:
@@ -277,13 +263,10 @@ def calculate_match_score(lost_item, found_item):
 # ------------------------------------------------------------------------------
 
 def report_lost_item():
-    """Collect details from user and save new lost item record."""
+    """Collect details from user and save new lost item record in MySQL."""
     print("\n" + "="*50)
     print("           REPORT A LOST ITEM")
     print("="*50)
-    
-    records = read_records(LOST_FILE)
-    item_id = get_next_id(records, prefix="10")
 
     item_name = input("Enter Item Name (e.g. Titan Watch, Calculator) : ").strip()
     if not item_name:
@@ -297,7 +280,7 @@ def report_lost_item():
 
     color = input("Enter Primary Color : ").strip()
     location = input("Where was it lost? (e.g. Physics Lab, Library) : ").strip()
-    
+
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     date_input = input(f"Enter Date Lost [YYYY-MM-DD] (Press Enter for today: {today_str}): ").strip()
     date_val = date_input if date_input else today_str
@@ -306,32 +289,28 @@ def report_lost_item():
     contact = input("Enter Contact Number / Roll No : ").strip()
     description = input("Detailed Description / Distinguishing marks : ").strip()
 
-    new_record = {
-        "id": item_id,
-        "item_name": item_name,
-        "category": category,
-        "color": color,
-        "location": location,
-        "date": date_val,
-        "reporter": reporter,
-        "contact": contact,
-        "description": description,
-        "status": "Lost"
-    }
-
-    records.append(new_record)
-    write_records(LOST_FILE, LOST_FIELDS, records)
-    print(f"\n[+] SUCCESS! Lost item reported successfully with ID #{item_id}.")
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        sql = """
+            INSERT INTO lost_items (item_name, category, color, location, lost_date, reporter, contact, description, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Lost')
+        """
+        cursor.execute(sql, (item_name, category, color, location, date_val, reporter, contact, description))
+        conn.commit()
+        item_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        print(f"\n[+] SUCCESS! Lost item reported in MySQL database with ID #{item_id}.")
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 def report_found_item():
-    """Collect details from user and save new found item record."""
+    """Collect details from user and save new found item record in MySQL."""
     print("\n" + "="*50)
     print("           REPORT A FOUND ITEM")
     print("="*50)
-    
-    records = read_records(FOUND_FILE)
-    item_id = get_next_id(records, prefix="20")
 
     item_name = input("Enter Item Name (e.g. Blue Bottle, Watch) : ").strip()
     if not item_name:
@@ -345,7 +324,7 @@ def report_found_item():
 
     color = input("Enter Primary Color : ").strip()
     location = input("Where was it found? (e.g. Playground bench) : ").strip()
-    
+
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     date_input = input(f"Enter Date Found [YYYY-MM-DD] (Press Enter for today: {today_str}): ").strip()
     date_val = date_input if date_input else today_str
@@ -354,117 +333,193 @@ def report_found_item():
     contact = input("Enter Contact Number / Deposit Location : ").strip()
     description = input("Detailed Description / Condition : ").strip()
 
-    new_record = {
-        "id": item_id,
-        "item_name": item_name,
-        "category": category,
-        "color": color,
-        "location": location,
-        "date": date_val,
-        "finder": finder,
-        "contact": contact,
-        "description": description,
-        "status": "Found"
-    }
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        sql = """
+            INSERT INTO found_items (item_name, category, color, location, found_date, finder, contact, description, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Found')
+        """
+        cursor.execute(sql, (item_name, category, color, location, date_val, finder, contact, description))
+        conn.commit()
+        item_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        print(f"\n[+] SUCCESS! Found item logged in MySQL database with ID #{item_id}.")
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
-    records.append(new_record)
-    write_records(FOUND_FILE, FOUND_FIELDS, records)
-    print(f"\n[+] SUCCESS! Found item registered with ID #{item_id}.")
 
-
-def display_table(records, title, is_lost=True):
-    """Print tabular formatted records."""
-    print("\n" + "="*88)
+def display_table(records, title):
+    """Print tabular formatted records from MySQL."""
+    print("\n" + "="*90)
     print(f"                       {title.upper()} ({len(records)} Records)")
-    print("="*88)
+    print("="*90)
     if not records:
         print(" No records found.")
-        print("-" * 88)
+        print("-" * 90)
         return
 
-    person_label = "Reporter" if is_lost else "Finder"
-    header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Location':<18}{'Date':<12}{'Status':<8}"
+    header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Location':<18}{'Date':<12}{'Status':<10}"
     print(header)
-    print("-" * 88)
+    print("-" * 90)
     for r in records:
-        print(f"{r['id']:<6}{r['item_name'][:18]:<20}{r['category'][:12]:<14}{r['color'][:8]:<10}{r['location'][:16]:<18}{r['date']:<12}{r['status']:<8}")
-    print("-" * 88)
+        id_val = str(r[0])
+        name = str(r[1])[:18]
+        cat = str(r[2])[:12]
+        color = str(r[3])[:8]
+        loc = str(r[4])[:16]
+        dt = str(r[5])
+        st = str(r[9])[:10]
+        print(f"{id_val:<6}{name:<20}{cat:<14}{color:<10}{loc:<18}{dt:<12}{st:<10}")
+    print("-" * 90)
 
 
 def view_lost_items():
-    """Display active lost items (excluding Recovered ones)."""
-    records = read_records(LOST_FILE)
-    # Recovered items are removed from the active list
-    active_lost = [r for r in records if r.get("status") != "Recovered"]
-    display_table(active_lost, "Active Lost Items List", is_lost=True)
+    """Display active lost items (excluding Recovered items)."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM lost_items WHERE status != 'Recovered'")
+        records = cursor.fetchall()
+        display_table(records, "Active Lost Items List")
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 def view_found_items():
-    """Display active found items (excluding Recovered ones)."""
-    records = read_records(FOUND_FILE)
-    # Recovered items are removed from the active list
-    active_found = [r for r in records if r.get("status") != "Recovered"]
-    display_table(active_found, "Active Found Items List", is_lost=False)
+    """Display active found items (excluding Recovered items)."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM found_items WHERE status != 'Recovered'")
+        records = cursor.fetchall()
+        display_table(records, "Active Found Items List")
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 def view_recovered_archive():
-    """Display all recovered items history from both lost and found records."""
+    """Display all recovered items history from both lost and found tables."""
     print("\n" + "="*95)
     print("                      RECOVERED & RETURNED ITEMS ARCHIVE")
     print("="*95)
-    lost_records = read_records(LOST_FILE)
-    found_records = read_records(FOUND_FILE)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    recovered_lost = [r for r in lost_records if r.get("status") == "Recovered"]
-    recovered_found = [r for r in found_records if r.get("status") == "Recovered"]
+        cursor.execute("SELECT * FROM lost_items WHERE status = 'Recovered'")
+        recovered_lost = cursor.fetchall()
 
-    if not recovered_lost and not recovered_found:
-        print(" No recovered items in the archive yet.")
-        print("-" * 95)
-        return
+        cursor.execute("SELECT * FROM found_items WHERE status = 'Recovered'")
+        recovered_found = cursor.fetchall()
 
-    print(f"\n--- RECOVERED LOST ITEMS ({len(recovered_lost)}) ---")
-    if recovered_lost:
-        header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Lost Location':<18}{'Owner/Reporter':<16}"
-        print(header)
-        print("-" * 95)
-        for r in recovered_lost:
-            print(f"{r['id']:<6}{r['item_name'][:18]:<20}{r['category'][:12]:<14}{r['color'][:8]:<10}{r['location'][:16]:<18}{r['reporter'][:14]:<16}")
-        print("-" * 95)
-    else:
-        print(" No items.")
+        if not recovered_lost and not recovered_found:
+            print(" No recovered items in the archive yet.")
+            print("-" * 95)
+            cursor.close()
+            conn.close()
+            return
 
-    print(f"\n--- RECOVERED / RETURNED FOUND ITEMS ({len(recovered_found)}) ---")
-    if recovered_found:
-        header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Found Location':<18}{'Found By':<16}"
-        print(header)
-        print("-" * 95)
-        for r in recovered_found:
-            print(f"{r['id']:<6}{r['item_name'][:18]:<20}{r['category'][:12]:<14}{r['color'][:8]:<10}{r['location'][:16]:<18}{r['finder'][:14]:<16}")
-        print("-" * 95)
-    else:
-        print(" No items.")
+        print(f"\n--- RECOVERED LOST ITEMS ({len(recovered_lost)}) ---")
+        if recovered_lost:
+            header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Lost Location':<18}{'Owner/Reporter':<16}"
+            print(header)
+            print("-" * 95)
+            for r in recovered_lost:
+                print(f"{r[0]:<6}{str(r[1])[:18]:<20}{str(r[2])[:12]:<14}{str(r[3])[:8]:<10}{str(r[4])[:16]:<18}{str(r[6])[:14]:<16}")
+            print("-" * 95)
+        else:
+            print(" No items.")
+
+        print(f"\n--- RECOVERED / RETURNED FOUND ITEMS ({len(recovered_found)}) ---")
+        if recovered_found:
+            header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Found Location':<18}{'Found By':<16}"
+            print(header)
+            print("-" * 95)
+            for r in recovered_found:
+                print(f"{r[0]:<6}{str(r[1])[:18]:<20}{str(r[2])[:12]:<14}{str(r[3])[:8]:<10}{str(r[4])[:16]:<18}{str(r[6])[:14]:<16}")
+            print("-" * 95)
+        else:
+            print(" No items.")
+
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 def search_items():
-    """Search records across lost and found databases."""
+    """Search records across lost and found MySQL tables using LIKE query."""
     print("\n" + "="*50)
     print("                SEARCH DATABASE")
     print("="*50)
-    keyword = input("Enter keyword to search (name, color, location, desc): ").strip().lower()
+    keyword = input("Enter keyword to search (name, color, location, desc): ").strip()
     if not keyword:
         print("[-] Search keyword cannot be empty.")
         return
 
-    lost_records = read_records(LOST_FILE)
-    found_records = read_records(FOUND_FILE)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        search_param = f"%{keyword}%"
 
-    matched_lost = [r for r in lost_records if keyword in (r['item_name'] + r['color'] + r['location'] + r['description'] + r['category']).lower()]
-    matched_found = [r for r in found_records if keyword in (r['item_name'] + r['color'] + r['location'] + r['description'] + r['category']).lower()]
+        query_lost = """
+            SELECT * FROM lost_items
+            WHERE item_name LIKE %s OR category LIKE %s OR color LIKE %s OR location LIKE %s OR description LIKE %s
+        """
+        cursor.execute(query_lost, (search_param, search_param, search_param, search_param, search_param))
+        lost_results = cursor.fetchall()
 
-    print(f"\n>>> Search Results for '{keyword}':")
-    display_table(matched_lost, f"Lost Items Matching '{keyword}'", is_lost=True)
-    display_table(matched_found, f"Found Items Matching '{keyword}'", is_lost=False)
+        query_found = """
+            SELECT * FROM found_items
+            WHERE item_name LIKE %s OR category LIKE %s OR color LIKE %s OR location LIKE %s OR description LIKE %s
+        """
+        cursor.execute(query_found, (search_param, search_param, search_param, search_param, search_param))
+        found_results = cursor.fetchall()
+
+        print(f"\n>>> Search Results for '{keyword}':")
+        display_table(lost_results, f"Lost Items Matching '{keyword}'")
+        display_table(found_results, f"Found Items Matching '{keyword}'")
+
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
+
+
+def row_to_dict(row, is_lost=True):
+    """Convert MySQL row tuple to dictionary."""
+    if is_lost:
+        return {
+            "id": str(row[0]),
+            "item_name": row[1],
+            "category": row[2],
+            "color": row[3],
+            "location": row[4],
+            "date": str(row[5]),
+            "reporter": row[6],
+            "contact": row[7],
+            "description": row[8],
+            "status": row[9]
+        }
+    else:
+        return {
+            "id": str(row[0]),
+            "item_name": row[1],
+            "category": row[2],
+            "color": row[3],
+            "location": row[4],
+            "date": str(row[5]),
+            "finder": row[6],
+            "contact": row[7],
+            "description": row[8],
+            "status": row[9]
+        }
 
 
 def find_possible_matches():
@@ -478,15 +533,31 @@ def find_possible_matches():
     print("                 SMART LOST & FOUND MATCHER ENGINE")
     print("="*88)
 
-    lost_records = [r for r in read_records(LOST_FILE) if r.get("status") == "Lost" or r.get("status") == "Matched"]
-    found_records = [r for r in read_records(FOUND_FILE) if r.get("status") == "Found" or r.get("status") == "Matched"]
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    if not lost_records:
+        cursor.execute("SELECT * FROM lost_items WHERE status = 'Lost' OR status = 'Matched'")
+        lost_rows = cursor.fetchall()
+
+        cursor.execute("SELECT * FROM found_items WHERE status = 'Found' OR status = 'Matched'")
+        found_rows = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
+        return
+
+    if not lost_rows:
         print("[!] No active 'Lost' items to match.")
         return
-    if not found_records:
+    if not found_rows:
         print("[!] No active 'Found' items to match against.")
         return
+
+    lost_records = [row_to_dict(r, is_lost=True) for r in lost_rows]
+    found_records = [row_to_dict(r, is_lost=False) for r in found_rows]
 
     matches = []
 
@@ -517,7 +588,6 @@ def find_possible_matches():
         lost = m["lost"]
         found = m["found"]
 
-        # Visual confidence bar
         bar_len = int(score / 5)
         bar = "#" * bar_len + "-" * (20 - bar_len)
 
@@ -529,50 +599,61 @@ def find_possible_matches():
         print(f"  Match Factors: {'; '.join(m['reasons'])}")
         print("-" * 88)
 
-    # Fast action: mark match as recovered
     prompt_rec = input("\nWould you like to mark any matched pair as RECOVERED now? (y/n): ").strip().lower()
     if prompt_rec == 'y':
         mark_recovered_pair()
 
 
 def mark_recovered_pair():
-    """Mark both a Lost Item and a Found Item as Recovered, removing both from active lists."""
+    """Mark both a Lost Item and a Found Item as Recovered in MySQL, removing both from active lists."""
     print("\n" + "="*50)
     print("      MARK MATCHED PAIR AS RECOVERED")
     print("="*50)
-    lost_id = input("Enter Lost Item ID  (e.g. 101): ").strip()
-    found_id = input("Enter Found Item ID (e.g. 201): ").strip()
+    lost_id = input("Enter Lost Item ID  (e.g. 1): ").strip()
+    found_id = input("Enter Found Item ID (e.g. 1): ").strip()
 
-    lost_records = read_records(LOST_FILE)
-    found_records = read_records(FOUND_FILE)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    lost_item = next((r for r in lost_records if r["id"] == lost_id), None)
-    found_item = next((r for r in found_records if r["id"] == found_id), None)
+        cursor.execute("SELECT * FROM lost_items WHERE id = %s", (lost_id,))
+        lost_row = cursor.fetchone()
 
-    if not lost_item:
-        print(f"[-] Lost Item ID #{lost_id} not found.")
-        return
-    if not found_item:
-        print(f"[-] Found Item ID #{found_id} not found.")
-        return
+        cursor.execute("SELECT * FROM found_items WHERE id = %s", (found_id,))
+        found_row = cursor.fetchone()
 
-    print(f"\nLost Record : #{lost_item['id']} - {lost_item['item_name']} (Owner: {lost_item['reporter']})")
-    print(f"Found Record: #{found_item['id']} - {found_item['item_name']} (Finder: {found_item['finder']})")
-    
-    confirm = input("\nConfirm marking this item as RECOVERED & returned to owner? (y/n): ").strip().lower()
-    if confirm == 'y':
-        lost_item["status"] = "Recovered"
-        found_item["status"] = "Recovered"
-        write_records(LOST_FILE, LOST_FIELDS, lost_records)
-        write_records(FOUND_FILE, FOUND_FIELDS, found_records)
-        print(f"\n[+] SUCCESS! Lost #{lost_id} & Found #{found_id} marked as RECOVERED.")
-        print("[+] Both items have been safely removed from active Lost and Found lists.")
-    else:
-        print("[*] Operation cancelled.")
+        if not lost_row:
+            print(f"[-] Lost Item ID #{lost_id} not found.")
+            cursor.close()
+            conn.close()
+            return
+        if not found_row:
+            print(f"[-] Found Item ID #{found_id} not found.")
+            cursor.close()
+            conn.close()
+            return
+
+        print(f"\nLost Record : #{lost_row[0]} - {lost_row[1]} (Owner: {lost_row[6]})")
+        print(f"Found Record: #{found_row[0]} - {found_row[1]} (Finder: {found_row[6]})")
+
+        confirm = input("\nConfirm marking this item as RECOVERED & returned to owner? (y/n): ").strip().lower()
+        if confirm == 'y':
+            cursor.execute("UPDATE lost_items SET status = 'Recovered' WHERE id = %s", (lost_id,))
+            cursor.execute("UPDATE found_items SET status = 'Recovered' WHERE id = %s", (found_id,))
+            conn.commit()
+            print(f"\n[+] SUCCESS! Lost #{lost_id} & Found #{found_id} updated to 'Recovered' in MySQL.")
+            print("[+] Both items have been removed from active Lost and Found lists.")
+        else:
+            print("[*] Operation cancelled.")
+
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 def mark_recovered():
-    """Menu interface to mark items as Recovered / Returned."""
+    """Menu interface to mark items as Recovered / Returned in MySQL."""
     print("\n" + "="*50)
     print("          MARK ITEM AS RECOVERED / RETURNED")
     print("="*50)
@@ -589,47 +670,64 @@ def mark_recovered():
         mark_recovered_pair()
 
     elif choice == "2":
-        lost_records = read_records(LOST_FILE)
         item_id = input("Enter Lost Item ID to mark as Recovered: ").strip()
-        target = next((r for r in lost_records if r["id"] == item_id), None)
-        if not target:
-            print(f"[-] Lost Item #{item_id} not found.")
-            return
-        target["status"] = "Recovered"
-        write_records(LOST_FILE, LOST_FIELDS, lost_records)
-        print(f"[+] SUCCESS! Lost Item #{item_id} ({target['item_name']}) marked as RECOVERED and removed from active Lost list.")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT item_name FROM lost_items WHERE id = %s", (item_id,))
+            res = cursor.fetchone()
+            if not res:
+                print(f"[-] Lost Item #{item_id} not found.")
+            else:
+                cursor.execute("UPDATE lost_items SET status = 'Recovered' WHERE id = %s", (item_id,))
+                conn.commit()
+                print(f"[+] SUCCESS! Lost Item #{item_id} ({res[0]}) marked as RECOVERED and removed from active list.")
+            cursor.close()
+            conn.close()
+        except Error as err:
+            print(f"[-] Database Error: {err}")
 
     elif choice == "3":
-        found_records = read_records(FOUND_FILE)
         item_id = input("Enter Found Item ID to mark as Recovered: ").strip()
-        target = next((r for r in found_records if r["id"] == item_id), None)
-        if not target:
-            print(f"[-] Found Item #{item_id} not found.")
-            return
-        target["status"] = "Recovered"
-        write_records(FOUND_FILE, FOUND_FIELDS, found_records)
-        print(f"[+] SUCCESS! Found Item #{item_id} ({target['item_name']}) marked as RECOVERED and removed from active Found list.")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT item_name FROM found_items WHERE id = %s", (item_id,))
+            res = cursor.fetchone()
+            if not res:
+                print(f"[-] Found Item #{item_id} not found.")
+            else:
+                cursor.execute("UPDATE found_items SET status = 'Recovered' WHERE id = %s", (item_id,))
+                conn.commit()
+                print(f"[+] SUCCESS! Found Item #{item_id} ({res[0]}) marked as RECOVERED and removed from active list.")
+            cursor.close()
+            conn.close()
+        except Error as err:
+            print(f"[-] Database Error: {err}")
 
     elif choice == "4":
         print("[1] Restore Lost Item  [2] Restore Found Item")
         sub_ch = input("Select (1 or 2): ").strip()
-        if sub_ch == "1":
-            filename, fields, default_st = LOST_FILE, LOST_FIELDS, "Lost"
-        elif sub_ch == "2":
-            filename, fields, default_st = FOUND_FILE, FOUND_FIELDS, "Found"
-        else:
+        table = "lost_items" if sub_ch == "1" else ("found_items" if sub_ch == "2" else None)
+        default_st = "Lost" if sub_ch == "1" else "Found"
+        if not table:
             print("[-] Invalid choice.")
             return
 
-        records = read_records(filename)
         item_id = input("Enter Item ID to restore: ").strip()
-        target = next((r for r in records if r["id"] == item_id), None)
-        if target:
-            target["status"] = default_st
-            write_records(filename, fields, records)
-            print(f"[+] Item #{item_id} restored to status '{default_st}' and added back to active list.")
-        else:
-            print(f"[-] Item #{item_id} not found.")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(f"UPDATE {table} SET status = %s WHERE id = %s", (default_st, item_id))
+            conn.commit()
+            if cursor.rowcount > 0:
+                print(f"[+] Item #{item_id} restored to status '{default_st}' and added back to active list.")
+            else:
+                print(f"[-] Item #{item_id} not found.")
+            cursor.close()
+            conn.close()
+        except Error as err:
+            print(f"[-] Database Error: {err}")
 
     elif choice == "5":
         return
@@ -638,7 +736,7 @@ def mark_recovered():
 
 
 def delete_record():
-    """Delete a record from Lost or Found file."""
+    """Delete a record from Lost or Found table in MySQL."""
     print("\n" + "="*50)
     print("                 DELETE RECORD")
     print("="*50)
@@ -646,56 +744,75 @@ def delete_record():
     print("[2] Delete from Found Items")
     choice = input("Select option (1 or 2): ").strip()
 
-    if choice == "1":
-        filename = LOST_FILE
-        fields = LOST_FIELDS
-        item_type = "Lost"
-    elif choice == "2":
-        filename = FOUND_FILE
-        fields = FOUND_FIELDS
-        item_type = "Found"
-    else:
+    table = "lost_items" if choice == "1" else ("found_items" if choice == "2" else None)
+    if not table:
         print("[-] Invalid choice.")
         return
 
-    records = read_records(filename)
-    item_id = input(f"Enter {item_type} Item ID to delete: ").strip()
-
-    updated_records = [r for r in records if r["id"] != item_id]
-    if len(updated_records) == len(records):
-        print(f"[-] ID #{item_id} not found.")
-    else:
-        confirm = input(f"Are you sure you want to permanently delete #{item_id}? (y/n): ").strip().lower()
-        if confirm == 'y':
-            write_records(filename, fields, updated_records)
-            print(f"[+] Record #{item_id} deleted successfully.")
+    item_id = input("Enter Item ID to delete: ").strip()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM {table} WHERE id = %s", (item_id,))
+        record = cursor.fetchone()
+        if not record:
+            print(f"[-] Item ID #{item_id} not found.")
         else:
-            print("[*] Deletion cancelled.")
+            confirm = input(f"Are you sure you want to permanently delete #{item_id} ({record[1]})? (y/n): ").strip().lower()
+            if confirm == 'y':
+                cursor.execute(f"DELETE FROM {table} WHERE id = %s", (item_id,))
+                conn.commit()
+                print(f"[+] Record #{item_id} deleted successfully from MySQL.")
+            else:
+                print("[*] Deletion cancelled.")
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 def display_stats():
-    """Display analytics and summary counts."""
-    lost = read_records(LOST_FILE)
-    found = read_records(FOUND_FILE)
+    """Display analytics and summary counts using SQL COUNT queries."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    active_lost = sum(1 for r in lost if r.get("status") == "Lost" or r.get("status") == "Matched")
-    recovered_lost = sum(1 for r in lost if r.get("status") == "Recovered" or r.get("status") == "Claimed")
-    active_found = sum(1 for r in found if r.get("status") == "Found" or r.get("status") == "Matched")
-    recovered_found = sum(1 for r in found if r.get("status") == "Recovered" or r.get("status") == "Claimed")
+        cursor.execute("SELECT COUNT(*) FROM lost_items")
+        total_lost = cursor.fetchone()[0]
 
-    print("\n" + "="*50)
-    print("           LOST & FOUND PORTAL METRICS")
-    print("="*50)
-    print(f" Total Lost Items Reported  : {len(lost)}")
-    print(f"   - Active in Lost List    : {active_lost}")
-    print(f"   - Recovered & Handed Over: {recovered_lost}")
-    print("-" * 50)
-    print(f" Total Found Items Logged   : {len(found)}")
-    print(f"   - Active in Found List   : {active_found}")
-    print(f"   - Recovered & Handed Over: {recovered_found}")
-    print("-" * 50)
-    print(f" Total Successful Recoveries: {recovered_lost + recovered_found}")
-    print("="*50)
+        cursor.execute("SELECT COUNT(*) FROM lost_items WHERE status != 'Recovered'")
+        active_lost = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM lost_items WHERE status = 'Recovered'")
+        recovered_lost = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM found_items")
+        total_found = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM found_items WHERE status != 'Recovered'")
+        active_found = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM found_items WHERE status = 'Recovered'")
+        recovered_found = cursor.fetchone()[0]
+
+        print("\n" + "="*50)
+        print("           LOST & FOUND PORTAL METRICS (MYSQL)")
+        print("="*50)
+        print(f" Total Lost Items Reported  : {total_lost}")
+        print(f"   - Active in Lost List    : {active_lost}")
+        print(f"   - Recovered & Handed Over: {recovered_lost}")
+        print("-" * 50)
+        print(f" Total Found Items Logged   : {total_found}")
+        print(f"   - Active in Found List   : {active_found}")
+        print(f"   - Recovered & Handed Over: {recovered_found}")
+        print("-" * 50)
+        print(f" Total Successful Recoveries: {recovered_lost + recovered_found}")
+        print("="*50)
+
+        cursor.close()
+        conn.close()
+    except Error as err:
+        print(f"[-] Database Error: {err}")
 
 
 # ------------------------------------------------------------------------------
@@ -704,10 +821,10 @@ def display_stats():
 
 def main():
     """Main program loop and menu driver."""
-    initialize_files()
+    initialize_database()
     while True:
         print("\n" + "="*58)
-        print("        SCHOOL LOST & FOUND MATCHER SYSTEM")
+        print("     SCHOOL LOST & FOUND MATCHER SYSTEM (MYSQL)")
         print("      CBSE Class 12 Computer Science Project")
         print("="*58)
         print(" [1]  Report a Lost Item")
