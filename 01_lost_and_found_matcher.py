@@ -210,8 +210,7 @@ def calculate_match_score(lost_item, found_item):
 
     # 1. Item Name Matching (Up to 35 pts)
     common_words = lost_words.intersection(found_words)
-    # Filter out trivial stop words
-    stop_words = {"the", "a", "an", "and", "with", "in", "of", "for"}
+    stop_words = {"the", "a", "an", "and", "with", "in", "of", "for", "have", "has"}
     meaningful_common = [w for w in common_words if w not in stop_words and len(w) > 1]
     if lost_name == found_name and lost_name:
         score += 35
@@ -383,6 +382,7 @@ def display_table(records, title, is_lost=True):
         print("-" * 88)
         return
 
+    person_label = "Reporter" if is_lost else "Finder"
     header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Location':<18}{'Date':<12}{'Status':<8}"
     print(header)
     print("-" * 88)
@@ -392,15 +392,58 @@ def display_table(records, title, is_lost=True):
 
 
 def view_lost_items():
-    """Display all lost items."""
+    """Display active lost items (excluding Recovered ones)."""
     records = read_records(LOST_FILE)
-    display_table(records, "Registered Lost Items", is_lost=True)
+    # Recovered items are removed from the active list
+    active_lost = [r for r in records if r.get("status") != "Recovered"]
+    display_table(active_lost, "Active Lost Items List", is_lost=True)
 
 
 def view_found_items():
-    """Display all found items."""
+    """Display active found items (excluding Recovered ones)."""
     records = read_records(FOUND_FILE)
-    display_table(records, "Registered Found Items", is_lost=False)
+    # Recovered items are removed from the active list
+    active_found = [r for r in records if r.get("status") != "Recovered"]
+    display_table(active_found, "Active Found Items List", is_lost=False)
+
+
+def view_recovered_archive():
+    """Display all recovered items history from both lost and found records."""
+    print("\n" + "="*95)
+    print("                      RECOVERED & RETURNED ITEMS ARCHIVE")
+    print("="*95)
+    lost_records = read_records(LOST_FILE)
+    found_records = read_records(FOUND_FILE)
+
+    recovered_lost = [r for r in lost_records if r.get("status") == "Recovered"]
+    recovered_found = [r for r in found_records if r.get("status") == "Recovered"]
+
+    if not recovered_lost and not recovered_found:
+        print(" No recovered items in the archive yet.")
+        print("-" * 95)
+        return
+
+    print(f"\n--- RECOVERED LOST ITEMS ({len(recovered_lost)}) ---")
+    if recovered_lost:
+        header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Lost Location':<18}{'Owner/Reporter':<16}"
+        print(header)
+        print("-" * 95)
+        for r in recovered_lost:
+            print(f"{r['id']:<6}{r['item_name'][:18]:<20}{r['category'][:12]:<14}{r['color'][:8]:<10}{r['location'][:16]:<18}{r['reporter'][:14]:<16}")
+        print("-" * 95)
+    else:
+        print(" No items.")
+
+    print(f"\n--- RECOVERED / RETURNED FOUND ITEMS ({len(recovered_found)}) ---")
+    if recovered_found:
+        header = f"{'ID':<6}{'Item Name':<20}{'Category':<14}{'Color':<10}{'Found Location':<18}{'Found By':<16}"
+        print(header)
+        print("-" * 95)
+        for r in recovered_found:
+            print(f"{r['id']:<6}{r['item_name'][:18]:<20}{r['category'][:12]:<14}{r['color'][:8]:<10}{r['location'][:16]:<18}{r['finder'][:14]:<16}")
+        print("-" * 95)
+    else:
+        print(" No items.")
 
 
 def search_items():
@@ -429,13 +472,14 @@ def find_possible_matches():
     Core Matcher Engine:
     Compares all active 'Lost' items against active 'Found' items,
     computes heuristic match scores, and ranks potential pairs.
+    Allows directly marking verified matches as Recovered on the spot.
     """
     print("\n" + "="*88)
     print("                 SMART LOST & FOUND MATCHER ENGINE")
     print("="*88)
 
-    lost_records = [r for r in read_records(LOST_FILE) if r.get("status") == "Lost"]
-    found_records = [r for r in read_records(FOUND_FILE) if r.get("status") == "Found"]
+    lost_records = [r for r in read_records(LOST_FILE) if r.get("status") == "Lost" or r.get("status") == "Matched"]
+    found_records = [r for r in read_records(FOUND_FILE) if r.get("status") == "Found" or r.get("status") == "Matched"]
 
     if not lost_records:
         print("[!] No active 'Lost' items to match.")
@@ -485,53 +529,112 @@ def find_possible_matches():
         print(f"  Match Factors: {'; '.join(m['reasons'])}")
         print("-" * 88)
 
+    # Fast action: mark match as recovered
+    prompt_rec = input("\nWould you like to mark any matched pair as RECOVERED now? (y/n): ").strip().lower()
+    if prompt_rec == 'y':
+        mark_recovered_pair()
 
-def mark_returned():
-    """Update status of lost or found item to 'Claimed' / 'Returned'."""
+
+def mark_recovered_pair():
+    """Mark both a Lost Item and a Found Item as Recovered, removing both from active lists."""
     print("\n" + "="*50)
-    print("            MARK ITEM AS CLAIMED / RETURNED")
+    print("      MARK MATCHED PAIR AS RECOVERED")
     print("="*50)
-    print("[1] Update Lost Item Status")
-    print("[2] Update Found Item Status")
-    choice = input("Select option (1 or 2): ").strip()
+    lost_id = input("Enter Lost Item ID  (e.g. 101): ").strip()
+    found_id = input("Enter Found Item ID (e.g. 201): ").strip()
 
-    if choice == "1":
-        filename = LOST_FILE
-        fields = LOST_FIELDS
-        item_type = "Lost"
-    elif choice == "2":
-        filename = FOUND_FILE
-        fields = FOUND_FIELDS
-        item_type = "Found"
-    else:
-        print("[-] Invalid choice.")
+    lost_records = read_records(LOST_FILE)
+    found_records = read_records(FOUND_FILE)
+
+    lost_item = next((r for r in lost_records if r["id"] == lost_id), None)
+    found_item = next((r for r in found_records if r["id"] == found_id), None)
+
+    if not lost_item:
+        print(f"[-] Lost Item ID #{lost_id} not found.")
+        return
+    if not found_item:
+        print(f"[-] Found Item ID #{found_id} not found.")
         return
 
-    records = read_records(filename)
-    item_id = input(f"Enter {item_type} Item ID to update: ").strip()
+    print(f"\nLost Record : #{lost_item['id']} - {lost_item['item_name']} (Owner: {lost_item['reporter']})")
+    print(f"Found Record: #{found_item['id']} - {found_item['item_name']} (Finder: {found_item['finder']})")
+    
+    confirm = input("\nConfirm marking this item as RECOVERED & returned to owner? (y/n): ").strip().lower()
+    if confirm == 'y':
+        lost_item["status"] = "Recovered"
+        found_item["status"] = "Recovered"
+        write_records(LOST_FILE, LOST_FIELDS, lost_records)
+        write_records(FOUND_FILE, FOUND_FIELDS, found_records)
+        print(f"\n[+] SUCCESS! Lost #{lost_id} & Found #{found_id} marked as RECOVERED.")
+        print("[+] Both items have been safely removed from active Lost and Found lists.")
+    else:
+        print("[*] Operation cancelled.")
 
-    found_flag = False
-    for r in records:
-        if r["id"] == item_id:
-            found_flag = True
-            print(f"Current Record: {r['item_name']} | Status: {r['status']}")
-            print("Select new status: [1] Claimed/Returned  [2] Matched  [3] Active/Reopen")
-            st_choice = input("Enter choice (1-3): ").strip()
-            if st_choice == "1":
-                r["status"] = "Claimed"
-            elif st_choice == "2":
-                r["status"] = "Matched"
-            elif st_choice == "3":
-                r["status"] = "Lost" if item_type == "Lost" else "Found"
-            else:
-                print("[-] Invalid selection. Status not changed.")
-                return
+
+def mark_recovered():
+    """Menu interface to mark items as Recovered / Returned."""
+    print("\n" + "="*50)
+    print("          MARK ITEM AS RECOVERED / RETURNED")
+    print("="*50)
+    print(" [1] Mark Matched Pair as Recovered (Removes both from active lists)")
+    print(" [2] Mark Single Lost Item as Recovered (Removes from active Lost list)")
+    print(" [3] Mark Single Found Item as Recovered (Removes from active Found list)")
+    print(" [4] Reopen / Restore a Recovered Item")
+    print(" [5] Return to Main Menu")
+    print("="*50)
+
+    choice = input("Select option (1-5): ").strip()
+
+    if choice == "1":
+        mark_recovered_pair()
+
+    elif choice == "2":
+        lost_records = read_records(LOST_FILE)
+        item_id = input("Enter Lost Item ID to mark as Recovered: ").strip()
+        target = next((r for r in lost_records if r["id"] == item_id), None)
+        if not target:
+            print(f"[-] Lost Item #{item_id} not found.")
+            return
+        target["status"] = "Recovered"
+        write_records(LOST_FILE, LOST_FIELDS, lost_records)
+        print(f"[+] SUCCESS! Lost Item #{item_id} ({target['item_name']}) marked as RECOVERED and removed from active Lost list.")
+
+    elif choice == "3":
+        found_records = read_records(FOUND_FILE)
+        item_id = input("Enter Found Item ID to mark as Recovered: ").strip()
+        target = next((r for r in found_records if r["id"] == item_id), None)
+        if not target:
+            print(f"[-] Found Item #{item_id} not found.")
+            return
+        target["status"] = "Recovered"
+        write_records(FOUND_FILE, FOUND_FIELDS, found_records)
+        print(f"[+] SUCCESS! Found Item #{item_id} ({target['item_name']}) marked as RECOVERED and removed from active Found list.")
+
+    elif choice == "4":
+        print("[1] Restore Lost Item  [2] Restore Found Item")
+        sub_ch = input("Select (1 or 2): ").strip()
+        if sub_ch == "1":
+            filename, fields, default_st = LOST_FILE, LOST_FIELDS, "Lost"
+        elif sub_ch == "2":
+            filename, fields, default_st = FOUND_FILE, FOUND_FIELDS, "Found"
+        else:
+            print("[-] Invalid choice.")
+            return
+
+        records = read_records(filename)
+        item_id = input("Enter Item ID to restore: ").strip()
+        target = next((r for r in records if r["id"] == item_id), None)
+        if target:
+            target["status"] = default_st
             write_records(filename, fields, records)
-            print(f"[+] Record #{item_id} status updated to '{r['status']}'.")
-            break
+            print(f"[+] Item #{item_id} restored to status '{default_st}' and added back to active list.")
+        else:
+            print(f"[-] Item #{item_id} not found.")
 
-    if not found_flag:
-        print(f"[-] Record with ID #{item_id} not found.")
+    elif choice == "5":
+        return
+    else:
+        print("[-] Invalid selection.")
 
 
 def delete_record():
@@ -575,21 +678,23 @@ def display_stats():
     lost = read_records(LOST_FILE)
     found = read_records(FOUND_FILE)
 
-    active_lost = sum(1 for r in lost if r.get("status") == "Lost")
-    claimed_lost = sum(1 for r in lost if r.get("status") == "Claimed")
-    active_found = sum(1 for r in found if r.get("status") == "Found")
-    claimed_found = sum(1 for r in found if r.get("status") == "Claimed")
+    active_lost = sum(1 for r in lost if r.get("status") == "Lost" or r.get("status") == "Matched")
+    recovered_lost = sum(1 for r in lost if r.get("status") == "Recovered" or r.get("status") == "Claimed")
+    active_found = sum(1 for r in found if r.get("status") == "Found" or r.get("status") == "Matched")
+    recovered_found = sum(1 for r in found if r.get("status") == "Recovered" or r.get("status") == "Claimed")
 
     print("\n" + "="*50)
     print("           LOST & FOUND PORTAL METRICS")
     print("="*50)
     print(f" Total Lost Items Reported  : {len(lost)}")
-    print(f"   - Active Lost            : {active_lost}")
-    print(f"   - Claimed / Recovered    : {claimed_lost}")
+    print(f"   - Active in Lost List    : {active_lost}")
+    print(f"   - Recovered & Handed Over: {recovered_lost}")
     print("-" * 50)
     print(f" Total Found Items Logged   : {len(found)}")
-    print(f"   - Active in Custody      : {active_found}")
-    print(f"   - Returned to Owner      : {claimed_found}")
+    print(f"   - Active in Found List   : {active_found}")
+    print(f"   - Recovered & Handed Over: {recovered_found}")
+    print("-" * 50)
+    print(f" Total Successful Recoveries: {recovered_lost + recovered_found}")
     print("="*50)
 
 
@@ -601,23 +706,24 @@ def main():
     """Main program loop and menu driver."""
     initialize_files()
     while True:
-        print("\n" + "="*55)
-        print("      SCHOOL LOST & FOUND MATCHER SYSTEM")
+        print("\n" + "="*58)
+        print("        SCHOOL LOST & FOUND MATCHER SYSTEM")
         print("      CBSE Class 12 Computer Science Project")
-        print("="*55)
+        print("="*58)
         print(" [1]  Report a Lost Item")
         print(" [2]  Report a Found Item")
-        print(" [3]  View All Lost Items")
-        print(" [4]  View All Found Items")
+        print(" [3]  View Active Lost Items")
+        print(" [4]  View Active Found Items")
         print(" [5]  Search Database (Keyword / Location / Color)")
         print(" [6]  Run Smart Matcher Engine (Auto-Match)")
-        print(" [7]  Update Status (Mark Claimed / Returned)")
-        print(" [8]  Delete a Record")
-        print(" [9]  View System Analytics & Statistics")
-        print(" [10] Exit")
-        print("="*55)
+        print(" [7]  Mark Item as RECOVERED (Remove from Active Lists)")
+        print(" [8]  View Recovered Items Archive / History")
+        print(" [9]  Delete a Record")
+        print(" [10] View System Analytics & Statistics")
+        print(" [11] Exit")
+        print("="*58)
 
-        choice = input("Enter your choice (1-10): ").strip()
+        choice = input("Enter your choice (1-11): ").strip()
 
         if choice == "1":
             report_lost_item()
@@ -632,16 +738,18 @@ def main():
         elif choice == "6":
             find_possible_matches()
         elif choice == "7":
-            mark_returned()
+            mark_recovered()
         elif choice == "8":
-            delete_record()
+            view_recovered_archive()
         elif choice == "9":
-            display_stats()
+            delete_record()
         elif choice == "10":
+            display_stats()
+        elif choice == "11":
             print("\nThank you for using School Lost & Found Matcher. Goodbye!")
             break
         else:
-            print("\n[-] Invalid option! Please choose a number between 1 and 10.")
+            print("\n[-] Invalid option! Please choose a number between 1 and 11.")
 
 
 if __name__ == "__main__":

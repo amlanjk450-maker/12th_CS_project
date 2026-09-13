@@ -10,7 +10,7 @@ All projects use **standard Python 3 library only** (utilizing the `csv` module 
 
 | Project File | Title | Description | Core Class 12 Concepts |
 |---|---|---|---|
-| [`01_lost_and_found_matcher.py`](file:///c:/all%20projects/cs%20final%20project/01_lost_and_found_matcher.py) | **Lost & Found Matcher** | A system for registering lost and found campus articles and computing rule-based similarity matching scores. | CSV File Handling, String manipulation, Heuristic Match Algorithm, Lists of Dictionaries. |
+| [`01_lost_and_found_matcher.py`](file:///c:/all%20projects/cs%20final%20project/01_lost_and_found_matcher.py) | **Lost & Found Matcher** | A system for registering lost and found campus articles, computing rule-based similarity matching scores, and managing item recovery. | CSV File Handling, String manipulation, Heuristic Match Algorithm, Lists of Dictionaries. |
 | [`02_school_canteen_ordering_system.py`](file:///c:/all%20projects/cs%20final%20project/02_school_canteen_ordering_system.py) | **School Canteen Ordering System** | Interactive menu catalog, multi-item shopping cart, order placement, and tax invoice receipt generation. | Nested Dictionaries/Lists, CSV I/O, Arithmetic & Financial Formatting, Order State Machine. |
 | [`03_student_marketplace.py`](file:///c:/all%20projects/cs%20final%20project/03_student_marketplace.py) | **Student-to-Student Marketplace** | Peer-to-peer campus exchange for textbooks, calculators, blazers, and sports gear with multi-criteria filtering and sorting. | Data Sorting (Lambda / Custom keys), Budget Range Filtering, CSV CRUD Operations. |
 | [`main.py`](file:///c:/all%20projects/cs%20final%20project/main.py) | **Master Launcher** | Quick menu interface to launch any of the 3 projects with one command. | Subprocess management, System calls. |
@@ -45,7 +45,7 @@ python main.py
 - **Features**:
   - Report Lost Item (Name, Category, Color, Location, Date, Contact, Description)
   - Report Found Item (Finder details, drop-off location, condition)
-  - Tabular view of all Lost & Found items
+  - View Active Lost Items & Active Found Items (Recovered items are automatically filtered out)
   - Search by keyword, color, or location
   - **Smart Matcher Engine**: Computes compatibility score (0–100%) between all active Lost vs Found records using:
     - Name keywords similarity (+35%)
@@ -53,7 +53,8 @@ python main.py
     - Color match (+20%)
     - Location overlap (+15%)
     - Description keyword overlap (+10%)
-  - Mark status as `Claimed` / `Returned`
+  - **Mark Item as RECOVERED**: Allows marking a matched pair or individual items as `Recovered`, which automatically removes them from both active Lost and Found lists.
+  - **Recovered Items Archive**: Dedicated view to audit and verify historical successful item handovers.
   - Statistical summary and analytics
 
 ### 2. Project 2: School Canteen Ordering System
@@ -92,5 +93,8 @@ python main.py
 3. **Q: How does the matching algorithm work in Project 1?**
    - **A:** It normalizes text (converts to lowercase, removes special characters and stop words), and applies weighted scoring across key attributes (Name, Category, Color, Location, Description) to compute a confidence percentage from 0% to 100%.
 
-4. **Q: How is input validation handled?**
+4. **Q: What happens when an item is marked "Recovered"?**
+   - **A:** The item's status is updated to `"Recovered"` in the persistent CSV files. Active listing functions automatically filter out items with `"Recovered"` status, removing them from active view while preserving them in the historical recovery archive.
+
+5. **Q: How is input validation handled?**
    - **A:** Using `try-except` blocks for numeric type casting (`float()`, `int()`), checking for non-empty string inputs, and verifying options against valid choices.
