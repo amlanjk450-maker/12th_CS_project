@@ -1,0 +1,264 @@
+================================================================================
+CLASS 12 COMPUTER SCIENCE PROJECT REPORT & CODE SYNOPSIS
+PROJECT TITLE: STUDENT-TO-STUDENT MARKETPLACE (PYTHON + MYSQL)
+================================================================================
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+- Title: Student-to-Student Marketplace
+- Target Curriculum: CBSE Class 12 Computer Science (Python + MySQL Connectivity)
+- Architecture: 2-Tier Modular Architecture (main.py + function.py)
+- Purpose: A local campus marketplace enabling students to buy and sell used 
+  academic items (books, calculators, uniforms, sports gear, etc.).
+- Primary Database: MySQL (Database: student_market_db | Table: listings)
+
+
+2. DATABASE SCHEMA & CONNECTION DETAILS
+--------------------------------------------------------------------------------
+- Database Name: student_market_db
+- Table Name: listings
+  • id: INT AUTO_INCREMENT PRIMARY KEY (Unique listing ID)
+  • item_name: VARCHAR(100) NOT NULL (Name/title of item)
+  • category: VARCHAR(50) NOT NULL (Books, Calculator, Uniform, etc.)
+  • condition_status: VARCHAR(30) NOT NULL (Like New, Good, Fair)
+  • price: DECIMAL(10,2) NOT NULL (Item price in INR)
+  • seller_name: VARCHAR(100) NOT NULL (Student/Teacher seller name)
+  • student_id: VARCHAR(50) NOT NULL (Roll number / Class ID)
+  • contact: VARCHAR(50) NOT NULL (Mobile / WhatsApp contact)
+  • listed_date: DATE NOT NULL (Date when item was registered)
+  • description: TEXT (Item condition and notes)
+  • status: VARCHAR(30) DEFAULT 'Available' ('Available' or 'Sold')
+
+- Connection Pipeline:
+  • Host: localhost (Port 3306)
+  • User: root
+  • Password: root (Configurable via DB_CONFIG dictionary)
+  • Driver: mysql.connector.connect()
+
+
+3. EXHAUSTIVE SUMMARY OF EVERY VARIABLE & CONSTANT
+--------------------------------------------------------------------------------
+A. Global Constants:
+- DB_CONFIG (Dict in function.py): Stores connection credentials (host, user, password, database).
+- CATEGORIES (List in function.py): Allowed listing categories ['Books', 'Calculator', 'Uniform', 'Stationery', 'Sports', 'Electronics', 'Other'].
+
+B. Local Variables (Function-wise):
+• In get_db_connection(use_database):
+  - use_database (bool parameter): Flags whether to connect directly to the database or only to MySQL server.
+  - conn (MySQLConnection object): Active database connection handle.
+  - err (Error object): Captures and inspects MySQL error numbers and messages.
+  - new_pwd (string): Holds user-provided MySQL password if authentication fails.
+
+• In initialize_database():
+  - conn (MySQLConnection object): Connection without selecting a database initially.
+  - cursor (MySQLCursor object): Command execution pointer.
+  - sample_data (list of tuples): Default demo records for first-time auto-seeding.
+
+• In display_listings_table(listings, title):
+  - listings (list of tuples): Rows fetched from MySQL query.
+  - title (string): Header title string printed above the table.
+  - header (string): Formatted table column header string.
+  - item (tuple): Individual database row inside loop.
+  - price_str (string): Formatted currency string with two decimal places.
+
+• In browse_all_listings():
+  - conn, cursor: Database communication objects.
+  - rows (list of tuples): All records where status = 'Available'.
+
+• In add_listing():
+  - item_name (string): Sanitized item title entered by user.
+  - cat_choice (string): User numeric input for category selection.
+  - cat_idx (int): Zero-based index converted from user input.
+  - category (string): Selected category string mapped from CATEGORIES list.
+  - cond_choice (string): Numeric choice for item condition (1, 2, or 3).
+  - cond_map (dict): Maps '1'->'Like New', '2'->'Good', '3'->'Fair'.
+  - condition (string): Resolved condition string.
+  - price_val (float): Validated numeric price in INR.
+  - seller_name (string): Name of seller (or 'Anonymous').
+  - student_id (string): Roll number / student ID (or 'N/A').
+  - contact (string): Mobile/WhatsApp contact info (or 'N/A').
+  - description (string): Detailed item description.
+  - today_str (string): Current date in 'YYYY-MM-DD' format.
+  - sql (string): Parameterized INSERT SQL query template.
+  - item_id (int): Auto-generated primary key ID from cursor.lastrowid.
+
+• In search_and_filter():
+  - choice (string): Submenu option for search mode (1 to 4).
+  - kw (string): Raw keyword entered by user.
+  - param (string): SQL LIKE wildcard string (f"%{kw}%").
+  - sql (string): SELECT query string with WHERE filters.
+  - c_choice (string): Category option index.
+  - target_cat (string): Target category name.
+  - max_p (float): Maximum price threshold for budget filtering.
+
+• In view_listing_details():
+  - item_id (string): Listing ID entered by user.
+  - target (tuple): Single row retrieved matching the specified ID.
+
+• In sort_listings():
+  - sort_choice (string): User selection for sorting criterion (1, 2, or 3).
+
+• In mark_item_sold():
+  - item_id (string): Target listing ID.
+  - target (tuple): Listing record holding item name and current status.
+  - reopen (string): User confirmation string ('y'/'n') to reopen a sold listing.
+  - confirm (string): User confirmation string ('y'/'n') to mark as sold.
+
+• In delete_listing():
+  - item_id (string): Target listing ID to delete.
+  - target (tuple): Existing item record for confirmation display.
+  - confirm (string): Confirmation flag before executing DELETE.
+
+• In marketplace_insights():
+  - total (int): Total count of all listings ever created.
+  - available_count (int): Count of currently active available listings.
+  - sold_count (int): Count of items successfully sold.
+  - cheapest (tuple): Row holding ID, name, price of lowest priced item.
+  - priciest (tuple): Row holding ID, name, price of highest priced item.
+  - avg_price (float): Mathematical average listing price from AVG().
+  - cat (string): Category name from GROUP BY result.
+  - cnt (int): Number of active items in that category.
+
+• In main() [in main.py]:
+  - choice (string): Top-level menu selection entered by user (1 to 9).
+
+
+4. EXHAUSTIVE SUMMARY OF EVERY USER-DEFINED FUNCTION
+--------------------------------------------------------------------------------
+1. get_db_connection(use_database=True)
+   - Parameters: use_database (bool, default=True)
+   - Returns: Active mysql.connector connection object
+   - Logic: Attempts database connection; handles error 1045 (wrong password by prompting),
+     error 1049 (missing DB by auto-initializing), error 2003 (server down with message).
+
+2. initialize_database()
+   - Parameters: None
+   - Returns: None
+   - Logic: Creates 'student_market_db' and 'listings' table if they don't exist; seeds 5 sample
+     records if table is empty.
+
+3. display_listings_table(listings, title="STUDENT MARKETPLACE LISTINGS")
+   - Parameters: listings (list of tuples), title (string)
+   - Returns: None
+   - Logic: Formats and prints a clean ASCII tabular grid with aligned columns (ID, Title,
+     Category, Condition, Price, Seller, Status).
+
+4. browse_all_listings()
+   - Parameters: None
+   - Returns: None
+   - Logic: Executes 'SELECT * FROM listings WHERE status = 'Available' ORDER BY id DESC'
+     and displays available items.
+
+5. add_listing()
+   - Parameters: None
+   - Returns: None
+   - Logic: Collects item details, validates positive price and non-empty name, automatically
+     stamps current date, and executes parameterized INSERT INTO.
+
+6. search_and_filter()
+   - Parameters: None
+   - Returns: None
+   - Logic: Provides 4 search methods: keyword search (LIKE on title/category/desc),
+     category filtering, budget constraint (price <= max_p), and full archives.
+
+7. view_listing_details()
+   - Parameters: None
+   - Returns: None
+   - Logic: Queries listing by ID ('SELECT * WHERE id = %s') and displays an expanded inspection card.
+
+8. sort_listings()
+   - Parameters: None
+   - Returns: None
+   - Logic: Allows user to dynamically sort available listings: Price Low->High (ASC),
+     Price High->Low (DESC), or Most Recent (listed_date DESC).
+
+9. mark_item_sold()
+   - Parameters: None
+   - Returns: None
+   - Logic: Verifies item existence and executes 'UPDATE listings SET status = 'Sold' WHERE id = %s'.
+     Also supports reopening sold items back to 'Available'.
+
+10. delete_listing()
+    - Parameters: None
+    - Returns: None
+    - Logic: Prompts confirmation and executes 'DELETE FROM listings WHERE id = %s'.
+
+11. marketplace_insights()
+    - Parameters: None
+    - Returns: None
+    - Logic: Executes SQL aggregate functions (COUNT, AVG, MIN, MAX, GROUP BY) and displays
+      inventory analytics and category distribution.
+
+12. main() [in main.py]
+    - Parameters: None
+    - Returns: None
+    - Logic: Menu driver loop presenting options 1-9, invoking appropriate functions from function.py.
+
+
+5. EVERY LOGIC & ALGORITHMIC COMPONENT
+--------------------------------------------------------------------------------
+- Modular Program Design: Separation of UI (main.py) and Database Engine (function.py).
+- Auto-Healing Connection Loop: while True loop in get_db_connection that recovers from wrong passwords.
+- Automatic Database & Schema Provisioning: CREATE DATABASE IF NOT EXISTS & CREATE TABLE IF NOT EXISTS.
+- Sample Data Auto-Seeding: SELECT COUNT(*) check before executing cursor.executemany().
+- Parameterized SQL Execution: All queries use %s placeholders to prevent SQL Injection attacks.
+- Input Validation:
+  • Non-empty string checks on item_name and search keywords.
+  • try-except ValueError on float(price) and int(choices).
+  • Boundary check: price >= 0.
+- SQL Filtering & Searching:
+  • Wildcard matching with LIKE %keyword%.
+  • Range filtering with price <= max_price.
+  • Exact matching on category = %s.
+- Dynamic Sorting: ORDER BY price ASC, ORDER BY price DESC, ORDER BY listed_date DESC.
+- Inventory State Transitions: Status toggling between 'Available' and 'Sold'.
+- Statistical Aggregations: COUNT(*), AVG(price), GROUP BY category, MIN/MAX price ordering.
+- Transaction Commit: conn.commit() executed after every INSERT, UPDATE, and DELETE.
+
+
+6. EXHAUSTIVE LIST OF ALL SYSTEM & BUILT-IN FUNCTIONS USED
+--------------------------------------------------------------------------------
+A. Python Standard Built-ins:
+- print(): Outputs text, banners, tables, and invoices to console.
+- input(): Prompts and captures interactive keyboard input from user.
+- str(): Typecasts IDs, dates, and database fields to string format.
+- float(): Converts prices to floating-point numbers for validation and calculation.
+- int(): Converts menu choices and ID strings into integer indices.
+- len(): Measures string lengths for slicing and counts elements in lists/tuples.
+- enumerate(): Iterates over category lists generating 1-based index numbering.
+- min() / max(): Boundary checks and numeric comparison.
+
+B. Python String Methods:
+- .strip(): Removes unwanted leading and trailing whitespaces/newlines from user inputs.
+- .lower(): Normalizes strings to lowercase for case-insensitive matching.
+- .upper(): Formats titles and status strings to uppercase for display consistency.
+
+C. Standard Library Modules:
+- sys.exit(1): Terminates script execution cleanly upon unrecoverable errors.
+- datetime.date.today(): Retrieves current system date.
+- datetime.date.today().strftime("%Y-%m-%d"): Formats date into standard SQL DATE string.
+
+D. MySQL Connector Library Methods:
+- mysql.connector.connect(): Establishes socket connection with MySQL server.
+- conn.is_connected(): Returns True if connection is alive and active.
+- conn.cursor(): Allocates a new database cursor object for query execution.
+- conn.commit(): Permanently saves transactional modifications (INSERT/UPDATE/DELETE).
+- conn.close(): Closes and releases database connection back to pool.
+- cursor.execute(query, params): Compiles and executes parameterized SQL query safely.
+- cursor.executemany(query, list_of_tuples): Performs batch multi-row insertion.
+- cursor.fetchone(): Fetches next single tuple from result set.
+- cursor.fetchall(): Fetches all remaining tuples from result set as a list.
+- cursor.close(): Closes cursor handle to free server memory.
+- cursor.lastrowid: Attribute containing AUTO_INCREMENT integer ID generated by last INSERT.
+- cursor.rowcount: Attribute indicating number of rows affected by UPDATE/DELETE.
+
+
+7. VIVA VOCE BULLET POINTS (READY-TO-SPEAK)
+--------------------------------------------------------------------------------
+- "The project uses Python 3 with mysql.connector for relational database persistence."
+- "Code is organized modularly: main.py contains the user menu; function.py contains all backend logic."
+- "Data is stored in the 'listings' table of 'student_market_db' database."
+- "Parameterized queries (%s) are used everywhere to eliminate SQL Injection risks."
+- "conn.commit() is invoked after every data modification to persist transactions."
+- "SQL aggregate functions (COUNT, AVG, MIN, MAX, GROUP BY) are used for analytics."
+================================================================================

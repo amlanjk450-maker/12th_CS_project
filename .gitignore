@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+gemini.md
+prompts/
+no_use/
+no use/
